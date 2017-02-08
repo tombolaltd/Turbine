@@ -1,0 +1,14 @@
+FROM frekele/java:jdk8
+
+# Create app directory
+RUN mkdir -p /app
+WORKDIR /app
+
+COPY . /app
+
+# Build the solution (using the gradle task)
+RUN ./gradlew build
+
+EXPOSE 8989
+
+ENTRYPOINT ./gradlew tombolaRun

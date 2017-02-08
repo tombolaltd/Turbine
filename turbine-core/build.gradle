@@ -12,7 +12,7 @@ dependencies {
     compile 'com.netflix.rxnetty:rx-netty:0.3.18'
     compile 'org.codehaus.jackson:jackson-core-asl:1.9.2'
     compile 'org.codehaus.jackson:jackson-mapper-asl:1.9.2'
-    compile 'net.sf.jopt-simple:jopt-simple:4.8'
+    compile 'net.sf.jopt-simple:jopt-simple:5.0.3'
     compile 'org.slf4j:slf4j-simple:1.7.7'
     testCompile 'junit:junit-dep:4.10'
     testCompile 'org.json:json:20140107'
@@ -32,4 +32,12 @@ publishing {
       artifactId = 'turbine-executable'
     }
   }
+}
+
+
+task tombolaRun(type: JavaExec) {
+    main = "com.netflix.turbine.StartTurbine"
+    classpath = sourceSets.main.runtimeClasspath
+    //args = ["-port", project.getProperty('port'), "-streams", project.getProperty('streams')]
+    args = ["-port", 8989, "-streams", "http://localhost:8080/hystrix.stream"]
 }
