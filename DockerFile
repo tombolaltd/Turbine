@@ -8,10 +8,8 @@ WORKDIR /app
 RUN git clone -b arcade/PU-2799_stats_for_proxy https://github.com/tombolaltd/Turbine.git
 
 WORKDIR /app/Turbine
-RUN ls -a
-# Build the solution (using the gradle task)
-RUN ./gradlew build
+RUN ./gradlew fatJar
 
 EXPOSE 8989
 
-ENTRYPOINT ./gradlew tombolaRun
+ENTRYPOINT java -jar turbine-core\build\libs\turbine-core-all-2.0.0-DP.3-SNAPSHOT.jar -port 8989 -streams http://gateway:8080/hystrix.stream
