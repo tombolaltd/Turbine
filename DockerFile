@@ -10,8 +10,8 @@ RUN git clone -b upgrade_netty https://github.com/tombolaltd/Turbine.git
 WORKDIR /app/Turbine
 RUN ls -a
 # Build the solution (using the gradle task)
-RUN ./gradlew build
+RUN gradle build
 
 EXPOSE 8989
 
-ENTRYPOINT ./gradlew tombolaRun
+ENTRYPOINT gradle tombolaRun
