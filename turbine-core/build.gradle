@@ -50,7 +50,7 @@ task tombolaRun(type: JavaExec) {
     main = "com.netflix.turbine.StartTurbine"
     classpath = sourceSets.main.runtimeClasspath
     //args = ["-port", project.getProperty('port'), "-streams", project.getProperty('streams')]
-    args = ["-port", 8989, "-streams", "http://localhost:8080/hystrix.stream"]
+    args = ["-port", 8989, "-streams", "http://gateway:8080/hystrix.stream"]
 }
 
 
