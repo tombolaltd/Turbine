@@ -1,11 +1,14 @@
-FROM frekele/java:jdk8
+FROM skobow/docker-gradle-git
 
 # Create app directory
 RUN mkdir -p /app
 WORKDIR /app
 
-COPY . /app
+# Bundle app source
+RUN git clone -b arcade/PU-2799_stats_for_proxy https://github.com/tombolaltd/Turbine.git
 
+WORKDIR /app/Turbine
+RUN ls -a
 # Build the solution (using the gradle task)
 RUN ./gradlew build
 
