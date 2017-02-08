@@ -1,3 +1,14 @@
+buildscript {
+    repositories {
+        jcenter()
+    }
+
+    dependencies {
+        classpath 'eu.appsatori:gradle-fatjar-plugin:0.3'
+    }
+}
+
+
 apply plugin: 'java'
 apply plugin: 'eclipse'
 apply plugin:'application'
@@ -9,8 +20,7 @@ targetCompatibility = JavaVersion.VERSION_1_8
 
 dependencies {
     compile 'io.reactivex:rxjava:1.0.8'
-    //compile 'com.netflix.rxnetty:rx-netty:0.3.18'
-    compile group: 'io.reactivex', name: 'rxnetty-http', version: '0.5.2'
+    compile 'com.netflix.rxnetty:rx-netty:0.3.18'
     compile 'org.codehaus.jackson:jackson-core-asl:1.9.2'
     compile 'org.codehaus.jackson:jackson-mapper-asl:1.9.2'
     compile 'net.sf.jopt-simple:jopt-simple:5.0.3'
@@ -22,17 +32,17 @@ dependencies {
 mainClassName = "com.netflix.turbine.StartTurbine"
 
 shadowJar {
-  baseName = 'turbine-executable'
-  classifier = ''
+    baseName = 'turbine-executable'
+    classifier = ''
 }
 
 publishing {
-  publications {
-    shadow(MavenPublication) {
-      from components.shadow
-      artifactId = 'turbine-executable'
+    publications {
+        shadow(MavenPublication) {
+            from components.shadow
+            artifactId = 'turbine-executable'
+        }
     }
-  }
 }
 
 
@@ -40,5 +50,26 @@ task tombolaRun(type: JavaExec) {
     main = "com.netflix.turbine.StartTurbine"
     classpath = sourceSets.main.runtimeClasspath
     //args = ["-port", project.getProperty('port'), "-streams", project.getProperty('streams')]
-    args = ["-port", 8989, "-streams", "http://192.168.99.1:8080/hystrix.stream"]
+    args = ["-port", 8989, "-streams", "http://gateway:8080/hystrix.stream"]
+}
+
+
+
+task fatJar(type: Jar) {
+    baseName = project.name + '-all'
+    from { configurations.compile.collect { it.isDirectory() ? it : zipTree(it) } }
+    with jar
+    manifest {
+        attributes 'Implementation-Title': 'Gradle Quickstart', 'Implementation-Version': version
+        attributes 'Main-Class': 'com.netflix.turbine.StartTurbine'
+    }
+}
+
+jar {
+    manifest {
+        attributes(
+                'Class-Path': configurations.compile.collect { it.getName() }.join(' '),
+                'Main-Class': 'com.netflix.turbine.StartTurbine'
+        )
+    }
 }
