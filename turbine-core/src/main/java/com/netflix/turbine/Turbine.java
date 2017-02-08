@@ -23,9 +23,11 @@ import com.netflix.turbine.discovery.StreamAction.ActionType;
 import com.netflix.turbine.discovery.StreamDiscovery;
 import com.netflix.turbine.internal.JsonUtility;
 import io.netty.buffer.ByteBuf;
+import io.netty.handler.codec.http.HttpMethod;
 import io.reactivex.netty.RxNetty;
-import io.reactivex.netty.pipeline.PipelineConfigurators;
-import io.reactivex.netty.protocol.text.sse.ServerSentEvent;
+import io.reactivex.netty.protocol.http.client.HttpClient;
+import io.reactivex.netty.protocol.http.server.HttpServer;
+import io.reactivex.netty.protocol.http.sse.ServerSentEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import rx.Observable;
@@ -35,7 +37,6 @@ import java.net.URI;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import static com.netflix.turbine.internal.RequestCreator.createRequest;
 
 public class Turbine {
 
@@ -50,15 +51,21 @@ public class Turbine {
                 .doOnSubscribe(() -> logger.info("Turbine => Starting aggregation"))
                 .flatMap(o -> o).publish().refCount();
 
-        RxNetty.createHttpServer(port, (request, response) -> {
-            logger.info("Turbine => SSE Request Received");
-            response.getHeaders().setHeader("Content-Type", "text/event-stream");
-            return publishedStreams
-                    .doOnUnsubscribe(() -> logger.info("Turbine => Unsubscribing RxNetty server connection"))
-                    .flatMap(data -> {
-                        return response.writeAndFlush(new ServerSentEvent(null, null, JsonUtility.mapToJson(data)));
-                    });
-        }, PipelineConfigurators.<ByteBuf>sseServerConfigurator()).startAndWait();
+        Observable<ServerSentEvent> v = publishedStreams.flatMap(data -> { return Observable.just(ServerSentEvent.withData(data.toString())); });
+
+        HttpServer.newServer(port)
+                .start((request, response) ->
+                        response
+                                .transformToServerSentEvents()
+                                .writeAndFlushOnEach(
+                                        publishedStreams
+                                                .doOnUnsubscribe(() -> logger.info("Turbine => Unsubscribing RxNetty server connection"))
+                                                .flatMap(data -> {
+                                                    return Observable.just(ServerSentEvent.withData(JsonUtility.mapToJson(data) + "\n"));
+                                                })
+                                )
+                )
+                .awaitShutdown();
     }
 
     public static void startServerSentEventServer(int port, StreamDiscovery discovery) {
@@ -92,19 +99,23 @@ public class Turbine {
                 streamAdds.map(streamAction -> {
                     URI uri = streamAction.getUri();
 
+
+
                     Observable<Map<String, Object>> io = Observable.defer(() -> {
-                        Observable<Map<String, Object>> flatMap = RxNetty.createHttpClient(uri.getHost(), uri.getPort(), PipelineConfigurators.<ByteBuf>sseClientConfigurator())
-                                .submit(createRequest(uri))
-                                .flatMap(response -> {
-                                    if (response.getStatus().code() != 200) {
-                                        return Observable.error(new RuntimeException("Failed to connect: " + response.getStatus()));
-                                    }
-                                    return response.getContent()
-                                            .doOnSubscribe(() -> logger.info("Turbine => Aggregate Stream from URI: " + uri.toASCIIString()))
-                                            .doOnUnsubscribe(() -> logger.info("Turbine => Unsubscribing Stream: " + uri))
-                                            .takeUntil(streamRemoves.filter(a -> a.getUri().equals(streamAction.getUri()))) // unsubscribe when we receive a remove event
-                                            .map(sse -> JsonUtility.jsonToMap(sse.getEventData()));
-                                });
+                        Observable<Map<String, Object>> flatMap =
+
+                                HttpClient.newClient(uri.getHost(), uri.getPort())
+                                        .createRequest(HttpMethod.GET, uri.toString())
+                                        .flatMap(response -> {
+                                            if (response.getStatus().code() != 200) {
+                                                return Observable.error(new RuntimeException("Failed to connect: " + response.getStatus()));
+                                            }
+                                            return response.getContentAsServerSentEvents()
+                                                    .doOnSubscribe(() -> logger.info("Turbine => Aggregate Stream from URI: " + uri.toASCIIString()))
+                                                    .doOnUnsubscribe(() -> logger.info("Turbine => Unsubscribing Stream: " + uri))
+                                                    .takeUntil(streamRemoves.filter(a -> a.getUri().equals(streamAction.getUri()))) // unsubscribe when we receive a remove event
+                                                    .map(sse -> JsonUtility.jsonToMap(sse.contentAsString()));
+                                        });
                         // eclipse is having issues with type inference so breaking up 
                         return flatMap.retryWhen(attempts -> {
                             return attempts.flatMap(e -> {

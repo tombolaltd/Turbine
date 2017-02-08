@@ -9,7 +9,8 @@ targetCompatibility = JavaVersion.VERSION_1_8
 
 dependencies {
     compile 'io.reactivex:rxjava:1.0.8'
-    compile 'com.netflix.rxnetty:rx-netty:0.3.18'
+    //compile 'com.netflix.rxnetty:rx-netty:0.3.18'
+    compile group: 'io.reactivex', name: 'rxnetty-http', version: '0.5.2'
     compile 'org.codehaus.jackson:jackson-core-asl:1.9.2'
     compile 'org.codehaus.jackson:jackson-mapper-asl:1.9.2'
     compile 'net.sf.jopt-simple:jopt-simple:5.0.3'

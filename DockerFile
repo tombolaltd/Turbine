@@ -5,7 +5,7 @@ RUN mkdir -p /app
 WORKDIR /app
 
 # Bundle app source
-RUN git clone -b arcade/PU-2799_stats_for_proxy https://github.com/tombolaltd/Turbine.git
+RUN git clone -b upgrade_netty https://github.com/tombolaltd/Turbine.git
 
 WORKDIR /app/Turbine
 RUN ls -a
